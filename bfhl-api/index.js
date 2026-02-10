@@ -1,152 +1,160 @@
-const express = require("express");
-const cors = require("cors");
-const axios = require("axios");
 require("dotenv").config();
+const express = require("express");
+const axios = require("axios");
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
-app.get("/health", (req, res) => {
-  return res.status(200).json({
-    is_success: true,
-    official_email: EMAIL
-  });
-});
+const EMAIL = "harshit0766.be23@chitkara.edu.in";
+const isNum = (x) => typeof x === "number" && !isNaN(x);
 
-function getFibonacci(n) {
-  let arr = [0, 1];
-  for (let i = 2; i < n; i++) {
-    arr.push(arr[i - 1] + arr[i - 2]);
-  }
-  return arr.slice(0, n);
+function fib(n) {
+    if (!isNum(n) || n < 0) return null;
+    let a = 0, b = 1, out = [];
+    for (let i = 0; i < n; i++) {
+        out.push(a);
+        [a, b] = [b, a + b];
+    }
+    return out;
 }
 
-function isPrime(num) {
-  if (num < 2) return false;
-  for (let i = 2; i * i <= num; i++) {
-    if (num % i === 0) return false;
-  }
-  return true;
+function isPrime(n) {
+    if (!isNum(n) || n < 2) return false;
+    for (let i = 2; i <= Math.sqrt(n); i++) {
+        if (n % i === 0) return false;
+    }
+    return true;
 }
 
 function gcd(a, b) {
-  while (b !== 0) {
-    let temp = b;
-    b = a % b;
-    a = temp;
-  }
-  return Math.abs(a);
+    a = Math.abs(a);
+    b = Math.abs(b);
+    while (b) {
+        [a, b] = [b, a % b];
+    }
+    return a;
 }
 
 function lcm(a, b) {
-  return Math.abs(a * b) / gcd(a, b);
+    if (a === 0 || b === 0) return 0;
+    return Math.abs(a * b) / gcd(a, b);
 }
 
-async function getAIAnswer(question) {
-  const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" +
-    process.env.GEMINI_API_KEY;
-
-  const body = {
-    contents: [
-      {
-        parts: [{ text: question }]
-      }
-    ]
-  };
-
-  try {
-    const response = await axios.post(url, body);
-
-    let answer =
-      response.data.candidates[0].content.parts[0].text;
-
-    // keep only one word
-    answer = answer.replace(/[^a-zA-Z ]/g, "").trim();
-    answer = answer.split(" ")[0];
-
-    return answer;
-  } catch (err) {
-    throw new Error("AI API failed");
-  }
+function lcmArray(arr) {
+    if (!arr.length) return null;
+    return arr.reduce((acc, curr) => lcm(acc, curr), arr[0]);
 }
 
-app.post("/bfhl", async (req, res) => {
-  try {
-    const body = req.body;
-    const keys = Object.keys(body);
+function hcfArray(arr) {
+    if (!arr.length) return null;
+    return arr.reduce((acc, curr) => gcd(acc, curr), arr[0]);
+}
 
-    if (keys.length !== 1) {
-      return res.status(400).json({
-        is_success: false,
-        official_email: EMAIL,
-        error: "Exactly one key is required"
-      });
-    }
-
-    const key = keys[0];
-    let result;
-
-    if (key === "fibonacci") {
-      const n = body[key];
-      if (typeof n !== "number" || n <= 0) {
-        throw new Error("Invalid fibonacci input");
-      }
-      result = getFibonacci(n);
-
-    } else if (key === "prime") {
-      if (!Array.isArray(body[key])) {
-        throw new Error("Prime input must be array");
-      }
-      result = body[key].filter(
-        (num) => Number.isInteger(num) && isPrime(num)
-      );
-
-    } else if (key === "lcm") {
-      const arr = body[key];
-      if (!Array.isArray(arr) || arr.length < 2) {
-        throw new Error("LCM requires at least two numbers");
-      }
-      result = arr.reduce((a, b) => lcm(a, b));
-
-    } else if (key === "hcf") {
-      const arr = body[key];
-      if (!Array.isArray(arr) || arr.length < 2) {
-        throw new Error("HCF requires at least two numbers");
-      }
-      result = arr.reduce((a, b) => gcd(a, b));
-
-    } else if (key === "AI") {
-      if (typeof body[key] !== "string") {
-        throw new Error("AI input must be string");
-      }
-      result = await getAIAnswer(body[key]);
-
-    } else {
-      throw new Error("Invalid key");
-    }
-
+app.get("/health", (req, res) => {
     res.status(200).json({
-      is_success: true,
-      official_email: EMAIL,
-      data: result
+        is_success: true,
+        official_email: EMAIL,
     });
-
-  } catch (err) {
-    res.status(400).json({
-      is_success: false,
-      official_email: EMAIL,
-      error: err.message
-    });
-  }
 });
 
-const EMAIL = "harshit0766.be23@chitkara.edu.in";
+app.post("/bfhl", async (req, res) => {
+    try {
+        const body = req.body;
+
+        if (!body || Object.keys(body).length !== 1) {
+            return res.status(400).json({ is_success: false });
+        }
+
+        const key = Object.keys(body)[0];
+        const value = body[key];
+        let data = null;
+
+        switch (key) {
+            case "fibonacci":
+                data = fib(value);
+                if (data === null) {
+                    return res.status(400).json({ is_success: false });
+                }
+                break;
+
+            case "prime":
+                if (!Array.isArray(value)) {
+                    return res.status(400).json({ is_success: false });
+                }
+                data = value.filter((v) => isPrime(v));
+                break;
+
+            case "lcm":
+                if (!Array.isArray(value)) {
+                    return res.status(400).json({ is_success: false });
+                }
+                data = lcmArray(value.filter(isNum));
+                if (data === null) {
+                    return res.status(400).json({ is_success: false });
+                }
+                break;
+
+            case "hcf":
+                if (!Array.isArray(value)) {
+                    return res.status(400).json({ is_success: false });
+                }
+                data = hcfArray(value.filter(isNum));
+                if (data === null) {
+                    return res.status(400).json({ is_success: false });
+                }
+                break;
+
+            case "AI":
+                if (typeof value !== "string") {
+                    return res.status(400).json({ is_success: false });
+                }
+
+                const ai = await axios.post(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent",
+                    {
+                        contents: [
+                            {
+                                parts: [{ text: value }]
+                            }
+                        ]
+                    },
+                    {
+                        headers: {
+                            "Content-Type": "application/json",
+                            "x-goog-api-key": process.env.GEMINI_API_KEY
+                        }
+                    }
+                );
+
+                const raw = ai.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                let cleaned = raw.replace(/[*_\n\r]/g, " ").trim();
+                let match = cleaned.match(/\bis\s+([A-Za-z]+)/i);
+
+                if (match) {
+                    data = match[1];
+                } else {
+                    let words = cleaned.match(/\b[A-Z][a-z]+\b/g);
+                    data = words ? words[words.length - 1] : cleaned.split(" ")[0];
+                }
+
+                break;
+
+            default:
+                return res.status(400).json({ is_success: false });
+        }
+
+        return res.status(200).json({
+            is_success: true,
+            official_email: EMAIL,
+            data: data,
+        });
+    } catch (e) {
+        return res.status(500).json({ is_success: false });
+    }
+});
 
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+    console.log(`API running on port ${PORT}`);
 });
-

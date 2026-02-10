@@ -10,7 +10,6 @@ Tech used:
 - Google Gemini API
 
 Deployed URL:
-[<your deployed link here>]
 ```
 https://bajaj-finserv-health-ensa.onrender.com/health
 ```
